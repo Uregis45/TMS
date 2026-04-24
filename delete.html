@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TMS - Delete Tasks | Task Management System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h2>TMS<sub>Task Management System</sub></h2>
+        <nav>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="delete.html">Del_Task</a></li>
+            <li><a href="filter.html">Filter Task</a></li>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div id="alertMessage" class="alert"></div>
+        
+        <h3>🗑️ Delete Tasks Management</h3>
+        
+        <div class="info-box">
+            <p><strong>ℹ️ How it works:</strong></p>
+            <p>• <strong>Permanently</strong> - Erases task completely (cannot be undone)</p>
+            <p>• <strong>Temporary</strong> - Moves task to backup area (can be restored below)</p>
+        </div>
+        
+        <h4>📌 Active Tasks</h4>
+        <div id="activeForDeleteList"></div>
+        
+        <hr>
+        
+        <h4>♻️ Backup Area (Temporarily Deleted Tasks)</h4>
+        <div id="restoreArea"></div>
+    </div>
+
+    <footer>
+        &copy; TMS, Powered by Junior's Developer Prince & Regis
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        loadTasks();
+        setActiveNav();
+        
+        function renderDeletePage() {
+            const activeNormal = getActiveTasks().filter(t => !t.tempDeleted);
+            const tempDeletedList = getTempDeletedTasks();
+            
+            const activeContainer = document.getElementById('activeForDeleteList');
+            if(activeNormal.length === 0) {
+                activeContainer.innerHTML = '<div class="empty-msg">No active tasks available.</div>';
+            } else {
+                activeContainer.innerHTML = activeNormal.map(task => `
+                    <div class="task-card" data-id="${task.id}">
+                        <div class="task-info">
+                            <strong>${escapeHtml(task.firstName)} ${escapeHtml(task.lastName)}</strong> — "${escapeHtml(task.taskDesc)}"
+                            <div class="task-meta">📅 ${task.date}</div>
+                        </div>
+                        <div class="task-actions">
+                            <div class="radio-group" style="margin-bottom:8px;">
+                                <label><input type="radio" name="deleteOption_${task.id}" value="permanent"> Permanently</label>
+                                <label><input type="radio" name="deleteOption_${task.id}" value="temp"> Temporary</label>
+                            </div>
+                            <button class="confirm-delete-btn" data-id="${task.id}">🗑️ Delete Task</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            const restoreContainer = document.getElementById('restoreArea');
+            if(tempDeletedList.length === 0) {
+                restoreContainer.innerHTML = '<div class="empty-msg">No temporarily deleted tasks. Use "Temporary" delete first.</div>';
+            } else {
+                restoreContainer.innerHTML = tempDeletedList.map(task => `
+                    <div class="task-card" style="border-left-color: #f39c12;">
+                        <div class="task-info">
+                            <strong>${escapeHtml(task.firstName)} ${escapeHtml(task.lastName)}</strong> — ${escapeHtml(task.taskDesc)}
+                            <div class="task-meta">🗑️ Removed (soft delete) - Due: ${task.date}</div>
+                        </div>
+                        <div class="task-actions">
+                            <button class="restore-btn" data-id="${task.id}">🔄 Restore Task</button>
+                            <button class="perm-delete-restore" data-id="${task.id}" style="background:#c0392b;">💀 Permanently Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            document.querySelectorAll('.confirm-delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const taskId = parseInt(btn.dataset.id);
+                    const selectedRadio = document.querySelector(`input[name="deleteOption_${taskId}"]:checked`);
+                    if(!selectedRadio) {
+                        alert("Please select delete option (Permanently or Temporary)");
+                        return;
+                    }
+                    const option = selectedRadio.value;
+                    if(option === 'permanent') {
+                        if(confirm("⚠️ Permanently delete this task? It cannot be undone.")) {
+                            permanentDelete(taskId);
+                        }
+                    } else if(option === 'temp') {
+                        if(confirm("Move task to temporary backup? You can restore later.")) {
+                            tempDeleteTask(taskId);
+                        }
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.restore-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const taskId = parseInt(btn.dataset.id);
+                    if(confirm("Restore this task back to active tasks?")) {
+                        restoreTask(taskId);
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.perm-delete-restore').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const taskId = parseInt(btn.dataset.id);
+                    if(confirm("Permanently erase this task? It will be gone forever.")) {
+                        permanentDelete(taskId);
+                    }
+                });
+            });
+        }
+        
+        renderDeletePage();
+    </script>
+</body>
+</html>

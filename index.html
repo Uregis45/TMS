@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TMS - Home | Task Management System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h2>TMS<sub>Task Management System</sub></h2>
+        <nav>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="delete.html">Del_Task</a></li>
+            <li><a href="filter.html">Filter Task</a></li>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div id="alertMessage" class="alert"></div>
+        
+        <h1>Welcome to TMS<sub>Task Management System</sub></h1>
+        <h3>➕ Add New Task</h3>
+        
+        <div class="form-group">
+            <label>First Name:</label>
+            <input type="text" id="firstName" placeholder="Enter first name">
+        </div>
+        <div class="form-group">
+            <label>Last Name:</label>
+            <input type="text" id="lastName" placeholder="Enter last name">
+        </div>
+        <div class="form-group">
+            <label>Due Date:</label>
+            <input type="date" id="taskDate">
+        </div>
+        <div class="form-group">
+            <label>Task Description:</label>
+            <input type="text" id="taskDesc" placeholder="Describe the task">
+        </div>
+        <button id="submitTaskBtn">✅ Submit Task</button>
+        
+        <div class="tasks-list">
+            <h3>📋 Current Active Tasks</h3>
+            <div id="taskListContainer"></div>
+        </div>
+    </div>
+
+    <footer>
+        &copy; TMS, Powered by Junior's Developer Prince & Regis
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        loadTasks();
+        setActiveNav();
+        
+        function renderHomeTasks() {
+            const activeTasks = getActiveTasks().filter(t => !t.tempDeleted);
+            const container = document.getElementById('taskListContainer');
+            
+            if(activeTasks.length === 0) {
+                container.innerHTML = '<div class="empty-msg">✨ No active tasks. Create one above!</div>';
+                return;
+            }
+            
+            container.innerHTML = activeTasks.map(task => `
+                <div class="task-card" data-id="${task.id}">
+                    <div class="task-info">
+                        <strong>${escapeHtml(task.firstName)} ${escapeHtml(task.lastName)}</strong> — ${escapeHtml(task.taskDesc)}
+                        <div class="task-meta">📅 Due: ${task.date}</div>
+                    </div>
+                    <div class="task-actions">
+                        <button class="del-task-btn" data-id="${task.id}" data-action="temp">🗑️ Temp Delete</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.querySelectorAll('.del-task-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const taskId = parseInt(btn.dataset.id);
+                    if(confirm("Move this task to temporary backup?")) {
+                        tempDeleteTask(taskId);
+                    }
+                });
+            });
+        }
+        
+        document.getElementById('submitTaskBtn').addEventListener('click', () => {
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+            const date = document.getElementById('taskDate').value;
+            const taskDesc = document.getElementById('taskDesc').value;
+            
+            if(addTask(firstName, lastName, date, taskDesc)) {
+                document.getElementById('firstName').value = '';
+                document.getElementById('lastName').value = '';
+                document.getElementById('taskDate').value = '';
+                document.getElementById('taskDesc').value = '';
+                renderHomeTasks();
+            } else {
+                renderHomeTasks();
+            }
+        });
+        
+        renderHomeTasks();
+    </script>
+</body>
+</html>

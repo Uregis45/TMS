@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TMS - Filter Tasks | Task Management System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h2>TMS<sub>Task Management System</sub></h2>
+        <nav>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="delete.html">Del_Task</a></li>
+            <li><a href="filter.html">Filter Task</a></li>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div id="alertMessage" class="alert"></div>
+        
+        <h3>🔍 Advanced Task Filtering</h3>
+        
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Search by Name or Task:</label>
+                <input type="text" id="searchKeyword" placeholder="Type first name, last name or task...">
+            </div>
+            <div class="filter-group">
+                <label>Due Date (From):</label>
+                <input type="date" id="dateFrom">
+            </div>
+            <div class="filter-group">
+                <label>Due Date (To):</label>
+                <input type="date" id="dateTo">
+            </div>
+            <div class="filter-group">
+                <label>Priority Filter:</label>
+                <select id="priorityFilter">
+                    <option value="all">All Tasks</option>
+                    <option value="urgent">Urgent (Date < today+3)</option>
+                    <option value="upcoming">Upcoming (Next 7 days)</option>
+                    <option value="future">Future (Beyond 7 days)</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Sort By:</label>
+                <select id="sortBy">
+                    <option value="date_asc">Date (Earliest First)</option>
+                    <option value="date_desc">Date (Latest First)</option>
+                    <option value="name_asc">Name (A-Z)</option>
+                    <option value="name_desc">Name (Z-A)</option>
+                </select>
+            </div>
+            <div>
+                <button id="applyFilterBtn" style="background:#2980b9;">Apply Filters</button>
+                <button id="resetFilterBtn">Reset</button>
+            </div>
+        </div>
+        
+        <div class="info-box">
+            <p><strong>💡 Pro Tip:</strong> Combine multiple filters for precise results! Use priority filter to find urgent tasks.</p>
+        </div>
+        
+        <div id="filteredTasksContainer">
+            <!-- Dynamic results appear here -->
+        </div>
+    </div>
+
+    <footer>
+        &copy; TMS, Powered by Junior's Developer Prince & Regis
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        loadTasks();
+        setActiveNav();
+        
+        function filterAndRender() {
+            let filtered = getActiveTasks().filter(t => !t.tempDeleted);
+            
+            const keyword = document.getElementById('searchKeyword')?.value.trim().toLowerCase() || '';
+            const dateFrom = document.getElementById('dateFrom')?.value;
+            const dateTo = document.getElementById('dateTo')?.value;
+            const priority = document.getElementById('priorityFilter')?.value || 'all';
+            const sortBy = document.getElementById('sortBy')?.value || 'date_asc';
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const threeDaysLater = new Date(today);
+            threeDaysLater.setDate(today.getDate() + 3);
+            const sevenDaysLater = new Date(today);
+            sevenDaysLater.setDate(today.getDate() + 7);
+            
+            // Keyword filter
+            if(keyword) {
+                filtered = filtered.filter(task => 
+                    task.firstName.toLowerCase().includes(keyword) ||
+                    task.lastName.toLowerCase().includes(keyword) ||
+                    task.taskDesc.toLowerCase().includes(keyword)
+                );
+            }
+            
+            // Date range filter
+            if(dateFrom) {
+                filtered = filtered.filter(task => task.date >= dateFrom);
+            }
+            if(dateTo) {
+                filtered = filtered.filter(task => task.date <= dateTo);
+            }
+            
+            // Priority filter
+            if(priority !== 'all') {
+                filtered = filtered.filter(task => {
+                    const taskDate = new Date(task.date);
+                    if(priority === 'urgent') {
+                        return taskDate <= threeDaysLater && taskDate >= today;
+                    } else if(priority === 'upcoming') {
+                        return taskDate <= sevenDaysLater && taskDate > threeDaysLater;
+                    } else if(priority === 'future') {
+                        return taskDate > sevenDaysLater;
+                    }
+                    return true;
+                });
+            }
+            
+            // Sorting
+            if(sortBy === 'date_asc') {
+                filtered.sort((a,b) => a.date.localeCompare(b.date));
+            } else if(sortBy === 'date_desc') {
+                filtered.sort((a,b) => b.date.localeCompare(a.date));
+            } else if(sortBy === 'name_asc') {
+                filtered.sort((a,b) => (a.firstName + a.lastName).localeCompare(b.firstName + b.lastName));
+            } else if(sortBy === 'name_desc') {
+                filtered.sort((a,b) => (b.firstName + b.lastName).localeCompare(a.firstName + a.lastName));
+            }
+            
+            const container = document.getElementById('filteredTasksContainer');
+            if(filtered.length === 0) {
+                container.innerHTML = '<div class="empty-msg">🔎 No tasks match your filters. Try adjusting criteria.</div>';
+                return;
+            }
+            
+            container.innerHTML = `
+                <h4>📌 Filtered Results (${filtered.length} ${filtered.length === 1 ? 'task' : 'tasks'})</h4>
+                ${filtered.map(task => `
+                    <div class="task-card">
+                        <div class="task-info">
+                            <strong>👤 ${escapeHtml(task.firstName)} ${escapeHtml(task.lastName)}</strong><br>
+                            📝 Task: ${escapeHtml(task.taskDesc)}<br>
+                            <span class="task-meta">🗓️ Due: ${task.date}</span>
+                        </div>
+                        <div class="task-actions">
+                            <button class="quick-temp-del" data-id="${task.id}" style="background:#f39c12;">🗑️ Temp Delete</button>
+                            <button class="quick-perm-del" data-id="${task.id}" style="background:#e74c3c;">💀 Perm Delete</button>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+            
+            document.querySelectorAll('.quick-temp-del').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const tid = parseInt(btn.dataset.id);
+                    if(confirm("Move to temporary backup?")) {
+                        tempDeleteTask(tid);
+                        setTimeout(() => filterAndRender(), 100);
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.quick-perm-del').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const tid = parseInt(btn.dataset.id);
+                    if(confirm("⚠️ Permanently delete this task? Irreversible.")) {
+                        permanentDelete(tid);
+                        setTimeout(() => filterAndRender(), 100);
+                    }
+                });
+            });
+        }
+        
+        document.getElementById('applyFilterBtn')?.addEventListener('click', filterAndRender);
+        document.getElementById('resetFilterBtn')?.addEventListener('click', () => {
+            document.getElementById('searchKeyword').value = '';
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            document.getElementById('priorityFilter').value = 'all';
+            document.getElementById('sortBy').value = 'date_asc';
+            filterAndRender();
+        });
+        
+        filterAndRender();
+    </script>
+</body>
+</html>
